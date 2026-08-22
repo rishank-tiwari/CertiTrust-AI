@@ -1,0 +1,50 @@
+# Backend Framework
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+motor==3.5.0
+pydantic-settings==2.4.0
+pydantic[email]==2.8.0
+
+# OCR Engines & Frameworks
+paddleocr>=2.7.0
+paddlepaddle>=2.6.0
+
+# Computer Vision & Image Processing
+opencv-python>=4.9.0
+Pillow>=10.2.0
+imutils>=0.5.4
+
+# Machine Learning & Deep Learning
+torch>=2.2.0
+torchvision>=0.17.0
+
+# Natural Language Processing
+spacy>=3.7.0
+transformers>=4.38.0
+
+# Data Analysis & Utilities
+numpy>=1.26.0
+pandas>=2.2.0
+scikit-learn>=1.4.0
+
+# PDF Document Processing
+pymupdf>=1.23.0
+pdf2image>=1.17.0
+pypdf>=4.0.0
+
+# Environment Management
+python-dotenv>=1.0.1
+
+# Database
+pymongo>=4.6.0
+
+# Authentication & Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Logging
+loguru>=0.7.2
+
+# Networking & Multipart
+python-multipart>=0.0.9
+requests>=2.31.0

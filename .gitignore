@@ -1,0 +1,48 @@
+# General OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Node / Frontend Dependency Exclusions
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Python / Backend Dependency Exclusions
+backend/venv/
+backend/.venv/
+backend/ENV/
+backend/__pycache__/
+backend/**/*.py[cod]
+backend/*$py.class
+backend/.env
+backend/.env.local
+backend/uploads/*
+!backend/uploads/.gitkeep
+backend/sample_documents/*
+!backend/sample_documents/.gitkeep
+backend/templates/*
+!backend/templates/.gitkeep
