@@ -107,7 +107,21 @@ setup_exception_handlers(app)
 # Register Root Health Endpoint (GET /)
 app.include_router(root_health_router)
 
-# Register API v1 Versioned Router (/api/v1)
+# Register active authenticated routes matching frontend API client calls
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from routes import auth, upload, analyze, verify, employer, student, institution
+app.include_router(auth.router)
+app.include_router(upload.router)
+app.include_router(analyze.router)
+app.include_router(verify.router)
+app.include_router(employer.router)
+app.include_router(student.router)
+app.include_router(institution.router)
+
+# Register API v1 Versioned Router (/api/v1) as fallback
 app.include_router(api_v1_router, prefix=f"/api/{settings.API_VERSION}")
 
 

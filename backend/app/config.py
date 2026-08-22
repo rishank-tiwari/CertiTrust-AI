@@ -29,10 +29,10 @@ class Settings:
         self.PORT: int = int(os.getenv("PORT", "8000"))
 
         # Database Configuration
-        self.MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017/certitrust_ai")
+        self.MONGODB_URI: str = os.getenv("MONGODB_URI") or os.getenv("MONGODB_URL") or "mongodb://localhost:27017/certitrust_ai"
 
         # Security & Authentication
-        self.JWT_SECRET: str = os.getenv("JWT_SECRET", "certitrust_ai_jwt_super_secret_key_change_in_production")
+        self.JWT_SECRET: str = os.getenv("JWT_SECRET") or os.getenv("JWT_SECRET_KEY") or "certitrust_ai_jwt_super_secret_key_change_in_production"
         self.JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
         self.ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 

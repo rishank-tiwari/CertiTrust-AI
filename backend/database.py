@@ -175,18 +175,25 @@ class DatabaseClient:
 db_client = DatabaseClient()
 
 async def connect_db():
+    import os
     settings = get_settings()
+    mongodb_uri = settings.MONGODB_URL or settings.MONGODB_URI or os.getenv("MONGODB_URI") or os.getenv("MONGODB_URL")
+    if not mongodb_uri:
+        logger.warning("MongoDB URI is empty! Check environment configuration.")
     try:
         logger.info("Attempting to connect to MongoDB Atlas...")
         # Use a short timeout of 5 seconds to switch to fallback quickly if blocked
         db_client.client = AsyncIOMotorClient(
-            settings.MONGODB_URL,
+            mongodb_uri or "mongodb://localhost:27017/certitrust",
             serverSelectionTimeoutMS=5000,
             connectTimeoutMS=5000
         )
         # Force connection check
-        await db_client.client.admin.command('ping')
-        db_client.db = db_client.client[settings.DATABASE_NAME]
+        if mongodb_uri:
+            await db_client.client.admin.command('ping')
+            db_client.db = db_client.client[settings.DATABASE_NAME]
+        else:
+            raise ValueError("Empty connection string")
         db_client.is_mock = False
         logger.info("Connected to MongoDB Atlas database successfully.")
     except Exception as e:
