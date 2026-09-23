@@ -95,7 +95,7 @@ class DocumentTypeClassifierService:
 
                 return {
                     "success": False,
-                    "document_type": "Not an Educational Credential",
+                    "document_type": doc_type,
                     "is_supported": False,
                     "confidence": confidence,
                     "reason": rejection_detail,

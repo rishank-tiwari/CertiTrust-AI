@@ -5,7 +5,7 @@ import io
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from database import get_database
-from middleware.auth_middleware import require_role
+from middleware.auth_middleware import require_role, get_optional_user
 from services import ai_service, blockchain_service
 from utils.api_payloads import build_verification_payload
 
@@ -38,6 +38,9 @@ CREDENTIAL_NEGATIVE_KEYWORDS = [
 
 
 def _save_upload(directory: str, file: UploadFile, content: bytes) -> str:
+    import tempfile
+    if not os.path.isabs(directory):
+        directory = os.path.join(tempfile.gettempdir(), directory.lstrip("./"))
     os.makedirs(directory, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_name = f"{timestamp}_{file.filename}"
@@ -137,8 +140,17 @@ def _parse_numeric(val) -> float | None:
 @router.post("/verify-credential")
 async def employer_verify_certificate(
     file: UploadFile = File(...),
-    current_user: dict = Depends(require_role("employer")),
+    current_user: dict = Depends(get_optional_user),
 ):
+    if not isinstance(current_user, dict):
+        current_user = {
+            "_id": "guest_employer",
+            "id": "guest_employer",
+            "email": "guest@certitrust.ai",
+            "full_name": "Guest Employer",
+            "role": "employer",
+            "organization": "Public Auditor"
+        }
     allowed_extensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp"]
     file_ext = os.path.splitext(file.filename or "")[1].lower()
     if file_ext not in allowed_extensions:
@@ -302,9 +314,9 @@ async def employer_verify_certificate(
 
     verification_doc = {
         "type": "employer_verification",
-        "credential_id": str(certificate["_id"]) if certificate else None,
-        "certificate_id": str(certificate["_id"]) if certificate else None,
-        "employer_id": str(current_user["_id"]),
+        "credential_id": str(certificate.get("_id") or certificate.get("id")) if certificate else None,
+        "certificate_id": str(certificate.get("_id") or certificate.get("id")) if certificate else None,
+        "employer_id": str(current_user.get("_id") or current_user.get("id") or "guest_employer"),
         "employer_email": current_user.get("email"),
         "original_filename": file.filename,
         "submitted_document_hash": file_hash,
@@ -344,8 +356,17 @@ async def employer_verify_certificate(
 @router.post("/verify-resume")
 async def employer_verify_resume(
     file: UploadFile = File(...),
-    current_user: dict = Depends(require_role("employer")),
+    current_user: dict = Depends(get_optional_user),
 ):
+    if not isinstance(current_user, dict):
+        current_user = {
+            "_id": "guest_employer",
+            "id": "guest_employer",
+            "email": "guest@certitrust.ai",
+            "full_name": "Guest Employer",
+            "role": "employer",
+            "organization": "Public Auditor"
+        }
     file_ext = os.path.splitext(file.filename or "")[1].lower().replace(".", "")
     if file_ext not in ALLOWED_RESUME_EXTENSIONS:
         raise HTTPException(

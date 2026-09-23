@@ -38,6 +38,7 @@ class Settings:
 
         # Upload & File Storage Config
         self.UPLOAD_FOLDER: Path = BASE_DIR / os.getenv("UPLOAD_FOLDER", "uploads")
+        self.UPLOAD_DIR: Path = self.UPLOAD_FOLDER
         self.MAX_FILE_SIZE: int = int(os.getenv("MAX_FILE_SIZE", "26214400"))  # 25 MB default
 
         # CORS Configuration

@@ -403,6 +403,11 @@ def evaluate_two_stage_classification(
     # 5. Core Credential Keyword Gating
     has_core_credential_keyword = any(kw in ocr_lower or kw in fname_lower for kw in CORE_CREDENTIAL_KEYWORDS)
 
+    # Rejection Rule D: Vivid Natural Scene / Product Image / Non-Document Photo
+    if vivid_color_ratio > 0.40 and light_paper_ratio < 0.35 and pos_score < 15 and not is_pdf:
+        reason = f"Visual inspection detected a natural photograph, product, or non-document image (Vivid color ratio: {vivid_color_ratio:.2f})."
+        return ("Unsupported Document", False, 0.92, reason, matched_positives, net_score, search_summary)
+
     # STAGE 1 GATE B: Rejection Filters
     if not has_core_credential_keyword or net_score < 15 or len(matched_positives) < 1:
         reason = "The uploaded file does not contain sufficient evidence of an educational, professional, or achievement credential."
@@ -417,11 +422,6 @@ def evaluate_two_stage_classification(
     if face_count > 0 and face_area_ratio > 0.22 and pos_score < 15:
         reason = f"Visual inspection detected a portrait photo or selfie (Face area ratio: {face_area_ratio:.2f}) without academic text."
         return ("Not an Educational Credential", False, 0.94, reason, matched_positives, net_score, search_summary)
-
-    # Rejection Rule D: Vivid Natural Scene / Product Image
-    if vivid_color_ratio > 0.60 and light_paper_ratio < 0.15 and pos_score < 15 and not is_pdf:
-        reason = f"Visual inspection detected a natural photograph, product, or non-document image (Vivid color ratio: {vivid_color_ratio:.2f})."
-        return ("Not an Educational Credential", False, 0.92, reason, matched_positives, net_score, search_summary)
 
     # Rejection Rule E: Empty page
     if laplacian_var < 1.0 and non_ws_count < 5 and not is_pdf:

@@ -11,10 +11,20 @@ import type {
   VerificationPayload,
 } from './types'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const ENV_API_URL = import.meta.env.VITE_API_URL || ''
+
+function buildUrl(path: string): string {
+  if (ENV_API_URL) {
+    return `${ENV_API_URL}${path}`
+  }
+  if (path.startsWith('/api/')) {
+    return path
+  }
+  return `/api${path}`
+}
 
 async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(buildUrl(path), {
     ...init,
     headers: {
       ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
@@ -79,6 +89,13 @@ export function getInstitutionAnalytics(token: string) {
 
 export function createInstitutionCertificate(token: string, form: FormData) {
   return request<CredentialRecord>('/institution/certificates', {
+    method: 'POST',
+    body: form,
+  }, token)
+}
+
+export function uploadCertificate(token: string, form: FormData) {
+  return request<CredentialRecord>('/upload', {
     method: 'POST',
     body: form,
   }, token)

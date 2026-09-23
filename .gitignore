@@ -46,3 +46,5 @@ backend/sample_documents/*
 !backend/sample_documents/.gitkeep
 backend/templates/*
 !backend/templates/.gitkeep
+
+.vercel

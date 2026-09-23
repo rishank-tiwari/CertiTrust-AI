@@ -44,9 +44,11 @@ async def create_certificate(
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-    os.makedirs("uploads", exist_ok=True)
+    import tempfile
+    upload_dir = os.path.join(tempfile.gettempdir(), "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join("uploads", f"{timestamp}_{file.filename}")
+    path = os.path.join(upload_dir, f"{timestamp}_{file.filename}")
     with open(path, "wb") as handle:
         handle.write(content)
 

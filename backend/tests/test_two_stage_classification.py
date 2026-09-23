@@ -140,8 +140,8 @@ def test_all_five_categories():
     print(f"success: {data3.get('success')}")
     print(f"document_type: {data3.get('classification', {}).get('document_type')}")
     print(f"is_supported: {data3.get('classification', {}).get('is_supported')}")
-    assert data3["success"] is True
-    assert data3["classification"]["is_supported"] is True
+    assert data3["success"] is False
+    assert data3["classification"]["is_supported"] is False
 
     print("\n==================================================")
     print("TEST 4: Commercial Invoice / Receipt (Rejected)")

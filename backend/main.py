@@ -40,18 +40,49 @@ app.include_router(employer.router)
 app.include_router(student.router)
 app.include_router(institution.router)
 
+from fastapi import APIRouter
+api_router = APIRouter(prefix="/api")
+api_router.include_router(auth.router)
+api_router.include_router(upload.router)
+api_router.include_router(analyze.router)
+api_router.include_router(verify.router)
+api_router.include_router(employer.router)
+api_router.include_router(student.router)
+api_router.include_router(institution.router)
+app.include_router(api_router)
+
+import logging
+logger = logging.getLogger("certitrust")
+
 @app.on_event("startup")
 async def startup_event():
-    os.makedirs("uploads", exist_ok=True)
-    await connect_db()
+    import tempfile
+    upload_dir = os.getenv("UPLOAD_DIR", os.path.join(tempfile.gettempdir(), "uploads"))
+    try:
+        os.makedirs(upload_dir, exist_ok=True)
+    except OSError:
+        upload_dir = os.path.join(tempfile.gettempdir(), "uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+    try:
+        await connect_db()
+    except Exception as err:
+        logger.warning(f"Database connection startup notice: {err}")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     await close_db()
 
 @app.get("/health")
+@api_router.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "CertiTrust AI API", "version": "1.0.0"}
+    from database import check_db_connection
+    db_status = await check_db_connection()
+    return {
+        "status": "healthy",
+        "service": "CertiTrust AI API",
+        "version": "1.0.0",
+        "database": db_status
+    }
 
 @app.get("/")
 async def root():

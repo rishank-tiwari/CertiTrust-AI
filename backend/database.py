@@ -40,7 +40,11 @@ class InMemoryCollection:
             self.documents.append(doc_copy)
             inserted_ids.append(doc_copy["_id"])
             
-        return InsertManyResult()
+        class InsertManyResult:
+            pass
+        result_obj = InsertManyResult()
+        result_obj.inserted_ids = inserted_ids
+        return result_obj
 
     async def delete_many(self, query):
         if not query:
@@ -177,27 +181,35 @@ db_client = DatabaseClient()
 async def connect_db():
     import os
     settings = get_settings()
-    mongodb_uri = settings.MONGODB_URL or settings.MONGODB_URI or os.getenv("MONGODB_URI") or os.getenv("MONGODB_URL")
+    mongodb_uri = os.getenv("MONGODB_URI") or os.getenv("MONGODB_URL") or getattr(settings, "MONGODB_URI", "") or getattr(settings, "MONGODB_URL", "")
     if not mongodb_uri:
-        logger.warning("MongoDB URI is empty! Check environment configuration.")
+        logger.warning("MongoDB URI is empty! Switching to In-Memory Database Fallback.")
     try:
-        logger.info("Attempting to connect to MongoDB Atlas...")
-        # Use a short timeout of 5 seconds to switch to fallback quickly if blocked
-        db_client.client = AsyncIOMotorClient(
-            mongodb_uri or "mongodb://localhost:27017/certitrust",
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=5000
-        )
-        # Force connection check
-        if mongodb_uri:
-            await db_client.client.admin.command('ping')
-            db_client.db = db_client.client[settings.DATABASE_NAME]
-        else:
+        if not mongodb_uri:
             raise ValueError("Empty connection string")
+        import certifi
+        try:
+            db_client.client = AsyncIOMotorClient(
+                mongodb_uri,
+                tlsCAFile=certifi.where(),
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000
+            )
+            await db_client.client.admin.command('ping')
+        except Exception:
+            db_client.client = AsyncIOMotorClient(
+                mongodb_uri,
+                tls=True,
+                tlsAllowInvalidCertificates=True,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000
+            )
+            await db_client.client.admin.command('ping')
+        db_client.db = db_client.client[settings.DATABASE_NAME]
         db_client.is_mock = False
         logger.info("Connected to MongoDB Atlas database successfully.")
     except Exception as e:
-        logger.warning(f"MongoDB Atlas connection failed: {e}")
+        logger.warning(f"MongoDB Atlas connection failed or unconfigured: {e}")
         logger.warning(">>> Switching to thread-safe local In-Memory Database Fallback for development resilience! <<<")
         db_client.db = InMemoryDatabase()
         db_client.is_mock = True
@@ -208,6 +220,10 @@ async def close_db():
         logger.info("Closed MongoDB connection.")
 
 def get_database():
+    if db_client.db is None:
+        logger.info("Database instance was None, initializing default fallback in-memory database.")
+        db_client.db = InMemoryDatabase()
+        db_client.is_mock = True
     return db_client.db
 
 def get_users_collection():
@@ -221,3 +237,42 @@ def get_verification_records_collection():
 
 def get_resume_analysis_collection():
     return db_client.db["resume_analysis"]
+
+async def check_db_connection() -> dict:
+    try:
+        import os
+        settings = get_settings()
+        mongodb_uri = os.getenv("MONGODB_URI") or os.getenv("MONGODB_URL") or getattr(settings, "MONGODB_URI", "") or getattr(settings, "MONGODB_URL", "")
+        
+        if db_client.client and not db_client.is_mock:
+            try:
+                await db_client.client.admin.command('ping')
+                return {
+                    "status": "connected",
+                    "database_name": settings.DATABASE_NAME,
+                    "is_mock": False,
+                    "message": "Connected to live MongoDB Atlas database."
+                }
+            except Exception as e:
+                return {
+                    "status": "in_memory_fallback",
+                    "database_name": settings.DATABASE_NAME,
+                    "is_mock": True,
+                    "error": str(e),
+                    "message": "MongoDB ping failed. Operating on in-memory fallback database."
+                }
+        else:
+            return {
+                "status": "in_memory_fallback",
+                "database_name": settings.DATABASE_NAME,
+                "is_mock": True,
+                "uri_configured": bool(mongodb_uri),
+                "message": "Operating on in-memory fallback database. Add a valid MONGODB_URI in Vercel settings to connect live MongoDB Atlas."
+            }
+    except Exception as e:
+        return {
+            "status": "in_memory_fallback",
+            "database_name": "certitrust",
+            "is_mock": True,
+            "error": str(e)
+        }

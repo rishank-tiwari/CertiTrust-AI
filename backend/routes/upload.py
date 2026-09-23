@@ -25,12 +25,14 @@ async def upload_certificate(
     if file_ext not in allowed_extensions:
         raise HTTPException(status_code=400, detail=f"File type {file_ext} not allowed. Allowed: {allowed_extensions}")
 
-    os.makedirs("uploads", exist_ok=True)
+    import tempfile
+    upload_dir = os.path.join(tempfile.gettempdir(), "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
 
     # Save with unique name to avoid collisions
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_filename = f"{timestamp}_{file.filename}"
-    file_path = f"uploads/{safe_filename}"
+    file_path = os.path.join(upload_dir, safe_filename)
 
     content = await file.read()
     with open(file_path, "wb") as f:
