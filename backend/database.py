@@ -1,11 +1,35 @@
 import logging
 import uuid
 import re
+import os
+import json
+import tempfile
 from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from config import get_settings
 
 logger = logging.getLogger(__name__)
+
+PERSIST_FILE_PATH = os.path.join(tempfile.gettempdir(), "certitrust_db_backup.json")
+
+
+def _read_persistent_db_state():
+    if os.path.exists(PERSIST_FILE_PATH):
+        try:
+            with open(PERSIST_FILE_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _write_persistent_db_state(state):
+    try:
+        with open(PERSIST_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(state, f, default=str)
+    except Exception:
+        pass
+
 
 # --- In-Memory Mock Database Fallback for Hackathon Presentation Resilience ---
 class InMemoryCollection:
@@ -13,25 +37,38 @@ class InMemoryCollection:
         self.name = name
         self.documents = []
 
+    def _sync_from_disk(self):
+        state = _read_persistent_db_state()
+        if self.name in state:
+            self.documents = state[self.name]
+
+    def _sync_to_disk(self):
+        state = _read_persistent_db_state()
+        state[self.name] = self.documents
+        _write_persistent_db_state(state)
+
     async def find_one(self, query):
+        self._sync_from_disk()
         for doc in self.documents:
             if self._match_query(doc, query):
-                # Return a copy to mimic real database document decoupling
                 return doc.copy()
         return None
 
     async def insert_one(self, document):
+        self._sync_from_disk()
         if "_id" not in document:
             document["_id"] = str(uuid.uuid4())
         doc_copy = document.copy()
         self.documents.append(doc_copy)
-        
+        self._sync_to_disk()
+
         class InsertResult:
             inserted_id = doc_copy["_id"]
-            
+
         return InsertResult()
 
     async def insert_many(self, documents):
+        self._sync_from_disk()
         inserted_ids = []
         for doc in documents:
             if "_id" not in doc:
@@ -39,7 +76,8 @@ class InMemoryCollection:
             doc_copy = doc.copy()
             self.documents.append(doc_copy)
             inserted_ids.append(doc_copy["_id"])
-            
+        self._sync_to_disk()
+
         class InsertManyResult:
             pass
         result_obj = InsertManyResult()
@@ -47,15 +85,18 @@ class InMemoryCollection:
         return result_obj
 
     async def delete_many(self, query):
+        self._sync_from_disk()
         if not query:
             self.documents = []
         else:
             self.documents = [d for d in self.documents if not self._match_query(d, query)]
+        self._sync_to_disk()
         class DeleteResult:
             deleted_count = len(self.documents)
         return DeleteResult()
 
     async def update_one(self, query, update):
+        self._sync_from_disk()
         doc = None
         # Locate the original document to mutate in-place in memory
         for d in self.documents:
@@ -65,18 +106,20 @@ class InMemoryCollection:
         if doc and "$set" in update:
             for k, v in update["$set"].items():
                 doc[k] = v
-                
+            self._sync_to_disk()
+
             class UpdateResult:
                 modified_count = 1
-                
+
             return UpdateResult()
-            
+
         class UpdateResult:
             modified_count = 0
-            
+
         return UpdateResult()
 
     async def count_documents(self, query):
+        self._sync_from_disk()
         count = 0
         for doc in self.documents:
             if self._match_query(doc, query):
@@ -84,6 +127,7 @@ class InMemoryCollection:
         return count
 
     def find(self, query=None, projection=None):
+        self._sync_from_disk()
         query = query or {}
         matched_docs = [doc.copy() for doc in self.documents if self._match_query(doc, query)]
         
