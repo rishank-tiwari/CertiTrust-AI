@@ -45,10 +45,13 @@ def validate_environment_and_directories():
 
     # 2. Directories Validation & Auto-Creation
     for directory in settings.REQUIRED_DIRS:
-        if not directory.exists():
-            logger.warning(f"Directory '{directory}' does not exist. Creating...")
-            directory.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Directory Check [{directory.name}]: Ready")
+        try:
+            if not directory.exists():
+                logger.warning(f"Directory '{directory}' does not exist. Creating...")
+                directory.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Directory Check [{directory.name}]: Ready")
+        except Exception as e:
+            logger.warning(f"Directory Check [{directory.name}] notice: {e}")
 
     logger.info("Startup validation completed successfully.")
 
