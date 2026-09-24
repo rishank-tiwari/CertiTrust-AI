@@ -40,7 +40,7 @@ async def upload_certificate(
 
     file_hash = hashlib.sha256(content).hexdigest()
 
-    db = get_database()
+    user_id_str = str(current_user["_id"])
     cert_doc = {
         "student_name": student_name,
         "university": university,
@@ -49,7 +49,11 @@ async def upload_certificate(
         "file_path": file_path,
         "file_hash": file_hash,
         "status": "pending",
-        "uploaded_by": str(current_user["_id"]),
+        "uploaded_by": user_id_str,
+        "institution_id": user_id_str,
+        "user_id": user_id_str,
+        "created_by": user_id_str,
+        "issuer_id": user_id_str,
         "created_at": datetime.now(timezone.utc)
     }
 

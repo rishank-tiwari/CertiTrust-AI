@@ -178,12 +178,14 @@ class DatabaseClient:
 
 db_client = DatabaseClient()
 
+DEFAULT_MONGODB_URI = "mongodb+srv://tiwaririshank242_db_user:CertiTrust2026@cluster0.4wegwkf.mongodb.net/certitrust?retryWrites=true&w=majority"
+
 async def connect_db():
     import os
     settings = get_settings()
     mongodb_uri = os.getenv("MONGODB_URI") or os.getenv("MONGODB_URL") or getattr(settings, "MONGODB_URI", "") or getattr(settings, "MONGODB_URL", "")
-    if not mongodb_uri:
-        logger.warning("MongoDB URI is empty! Switching to In-Memory Database Fallback.")
+    if not mongodb_uri or mongodb_uri.strip() == "":
+        mongodb_uri = DEFAULT_MONGODB_URI
     try:
         if not mongodb_uri:
             raise ValueError("Empty connection string")

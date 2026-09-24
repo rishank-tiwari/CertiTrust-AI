@@ -11,16 +11,38 @@ router = APIRouter(prefix="/institution", tags=["Institution"])
 
 
 def _certificate_payload(document: dict):
+    doc_id = str(document.get("_id")) if document.get("_id") is not None else str(document.get("id", ""))
+    created_at = document.get("created_at")
+    created_at_str = created_at.isoformat() if hasattr(created_at, "isoformat") else (str(created_at) if created_at else None)
     return {
-        "id": str(document.get("_id")) if document.get("_id") else document.get("id"),
+        "id": doc_id,
         "student_name": document.get("student_name"),
         "student_email": document.get("student_email"),
         "university": document.get("university"),
         "degree": document.get("degree"),
         "course": document.get("course"),
         "certificate_number": document.get("certificate_number"),
-        "status": document.get("status"),
-        "created_at": document.get("created_at").isoformat() if document.get("created_at") else None,
+        "status": document.get("status", "pending"),
+        "created_at": created_at_str,
+    }
+
+
+def _get_institution_query(current_user: dict):
+    user_id_str = str(current_user["_id"])
+    raw_id = current_user["_id"]
+    return {
+        "$or": [
+            {"uploaded_by": user_id_str},
+            {"uploaded_by": raw_id},
+            {"institution_id": user_id_str},
+            {"institution_id": raw_id},
+            {"user_id": user_id_str},
+            {"user_id": raw_id},
+            {"created_by": user_id_str},
+            {"created_by": raw_id},
+            {"issuer_id": user_id_str},
+            {"issuer_id": raw_id},
+        ]
     }
 
 
@@ -52,6 +74,7 @@ async def create_certificate(
     with open(path, "wb") as handle:
         handle.write(content)
 
+    user_id_str = str(current_user["_id"])
     document = {
         "student_name": student_name,
         "student_email": student_email,
@@ -62,7 +85,11 @@ async def create_certificate(
         "file_path": path,
         "file_hash": hashlib.sha256(content).hexdigest(),
         "status": "pending",
-        "uploaded_by": str(current_user["_id"]),
+        "uploaded_by": user_id_str,
+        "institution_id": user_id_str,
+        "user_id": user_id_str,
+        "created_by": user_id_str,
+        "issuer_id": user_id_str,
         "created_at": datetime.now(timezone.utc),
     }
 
@@ -78,6 +105,7 @@ async def bulk_create_certificates(
     current_user: dict = Depends(require_role("institution")),
 ):
     db = get_database()
+    user_id_str = str(current_user["_id"])
     documents = []
     for item in certificates:
         documents.append(
@@ -89,7 +117,11 @@ async def bulk_create_certificates(
                 "course": item.get("course", ""),
                 "certificate_number": item.get("certificate_number"),
                 "status": "pending",
-                "uploaded_by": str(current_user["_id"]),
+                "uploaded_by": user_id_str,
+                "institution_id": user_id_str,
+                "user_id": user_id_str,
+                "created_by": user_id_str,
+                "issuer_id": user_id_str,
                 "created_at": datetime.now(timezone.utc),
             }
         )
@@ -109,11 +141,9 @@ async def get_institution_credentials(
     current_user: dict = Depends(require_role("institution"))
 ):
     db = get_database()
-    institution_id = str(current_user["_id"])
+    query = _get_institution_query(current_user)
 
-    credentials = await db.credentials.find(
-        {"uploaded_by": institution_id}
-    ).sort("created_at", -1).limit(100).to_list(length=100)
+    credentials = await db.credentials.find(query).sort("created_at", -1).limit(100).to_list(length=100)
 
     return {
         "credentials": [_certificate_payload(cert) for cert in credentials],
@@ -121,7 +151,7 @@ async def get_institution_credentials(
         "institution": {
             "name": current_user.get("organization") or current_user.get("full_name"),
             "email": current_user.get("email"),
-            "id": institution_id,
+            "id": str(current_user["_id"]),
         },
     }
 
@@ -131,15 +161,21 @@ async def get_institution_analytics(
     current_user: dict = Depends(require_role("institution"))
 ):
     db = get_database()
-    institution_id = str(current_user["_id"])
+    query = _get_institution_query(current_user)
 
-    total_certs = await db.credentials.count_documents({"uploaded_by": institution_id})
-    verified_certs = await db.credentials.count_documents({"uploaded_by": institution_id, "status": "verified"})
-    pending_certs = await db.credentials.count_documents({"uploaded_by": institution_id, "status": "pending"})
-    flagged_certs = await db.credentials.count_documents({"uploaded_by": institution_id, "status": "flagged"})
-    analyzing_certs = await db.credentials.count_documents({"uploaded_by": institution_id, "status": "analyzing"})
+    total_certs = await db.credentials.count_documents(query)
 
-    cert_ids_cursor = db.credentials.find({"uploaded_by": institution_id}, {"_id": 1})
+    verified_query = {"$and": [query, {"status": "verified"}]}
+    pending_query = {"$and": [query, {"status": "pending"}]}
+    flagged_query = {"$and": [query, {"status": "flagged"}]}
+    analyzing_query = {"$and": [query, {"status": "analyzing"}]}
+
+    verified_certs = await db.credentials.count_documents(verified_query)
+    pending_certs = await db.credentials.count_documents(pending_query)
+    flagged_certs = await db.credentials.count_documents(flagged_query)
+    analyzing_certs = await db.credentials.count_documents(analyzing_query)
+
+    cert_ids_cursor = db.credentials.find(query, {"_id": 1})
     cert_ids = [str(c["_id"]) async for c in cert_ids_cursor]
 
     external_verifications = await db.verification_records.count_documents(
