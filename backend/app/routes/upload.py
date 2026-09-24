@@ -39,30 +39,6 @@ def validate_file(filename: str, file_size: int):
         )
 
 
-from app.services.document_service import DocumentService
-
-
-@router.post(
-    "/documents/upload",
-    status_code=status.HTTP_201_CREATED,
-    summary="Upload Document for End-to-End AI Verification Pipeline",
-)
-async def upload_document_for_verification(file: UploadFile = File(...)):
-    if not file.filename:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file must have a valid filename.",
-        )
-    file_bytes = await file.read()
-    if len(file_bytes) == 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Uploaded file is empty (0 bytes).",
-        )
-    record = await DocumentService.save_and_process_document(file.filename, file_bytes)
-    return record
-
-
 @router.post(
     "/upload",
     status_code=status.HTTP_200_OK,

@@ -21,26 +21,22 @@ try:
         colorize=True,
     )
 
-    # Create logs directory using tempdir fallback for serverless read-only environments
-    try:
-        import tempfile
-        LOGS_DIR = Path(tempfile.gettempdir()) / "logs"
-        LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    # Create logs directory
+    LOGS_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
-        # Configure file rotation handler
-        _loguru_logger.add(
-            LOGS_DIR / "certitrust_ai.log",
-            rotation="10 MB",
-            retention="7 days",
-            level="INFO",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{line} - {message}",
-        )
-    except Exception:
-        pass
+    # Configure file rotation handler
+    _loguru_logger.add(
+        LOGS_DIR / "certitrust_ai.log",
+        rotation="10 MB",
+        retention="7 days",
+        level="INFO",
+        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{line} - {message}",
+    )
 
     logger = _loguru_logger
 
-except Exception:
+except ImportError:
     # Fallback to standard logging if loguru is not installed yet
     standard_logger = logging.getLogger("certitrust_ai")
     if not standard_logger.handlers:

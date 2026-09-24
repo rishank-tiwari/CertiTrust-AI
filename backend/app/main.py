@@ -45,13 +45,10 @@ def validate_environment_and_directories():
 
     # 2. Directories Validation & Auto-Creation
     for directory in settings.REQUIRED_DIRS:
-        try:
-            if not directory.exists():
-                logger.warning(f"Directory '{directory}' does not exist. Creating...")
-                directory.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Directory Check [{directory.name}]: Ready")
-        except Exception as e:
-            logger.warning(f"Directory Check [{directory.name}] notice: {e}")
+        if not directory.exists():
+            logger.warning(f"Directory '{directory}' does not exist. Creating...")
+            directory.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Directory Check [{directory.name}]: Ready")
 
     logger.info("Startup validation completed successfully.")
 
@@ -110,21 +107,7 @@ setup_exception_handlers(app)
 # Register Root Health Endpoint (GET /)
 app.include_router(root_health_router)
 
-# Register active authenticated routes matching frontend API client calls
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from routes import auth, upload, analyze, verify, employer, student, institution
-app.include_router(auth.router)
-app.include_router(upload.router)
-app.include_router(analyze.router)
-app.include_router(verify.router)
-app.include_router(employer.router)
-app.include_router(student.router)
-app.include_router(institution.router)
-
-# Register API v1 Versioned Router (/api/v1) as fallback
+# Register API v1 Versioned Router (/api/v1)
 app.include_router(api_v1_router, prefix=f"/api/{settings.API_VERSION}")
 
 

@@ -858,16 +858,8 @@ class ExtractionService:
                             break
 
         university = self._parse_regex(text, [
-            r"\bfrom\s+([A-Z][A-Za-z\s]+?(?:University|Institute(?:\s+of\s+[A-Z][A-Za-z]+)?|College|Academy))\b",
-            r"\b((?:University|Institute|College|Academy)\s+of\s+[A-Z][A-Za-z\s]+)\b",
-            r"\b([A-Z][A-Za-z\s]+?\s+(?:University|Institute|College|Academy))\b",
+            r"\b((?:University|Institute|College|Academy|School)\s+of\s+[A-Z][A-Za-z\s]+|(?:[A-Z][A-Za-z]+\s+)+(?:University|Institute|College|Academy)(?:\s+of\s+[A-Z][A-Za-z]+)?)\b",
         ])
-        if university and any(kw in university.upper() for kw in ["CERTIFICATE", "COMPLETION", "ACHIEVEMENT", "CERTIFY"]):
-            university = self._parse_regex(text, [
-                r"\bfrom\s+([A-Z][A-Za-z\s]+?(?:University|Institute(?:\s+of\s+[A-Z][A-Za-z]+)?|College|Academy))\b",
-                r"\b((?:University|Institute|College|Academy)\s+of\s+[A-Z][A-Za-z\s]+)\b",
-                r"\b([A-Z][A-Za-z\s]+?\s+(?:University|Institute|College|Academy))\b",
-            ])
 
         degree = self._parse_regex(text, [
             r"\b((?:Bachelor|Master|Doctor|Diploma|Certificate)\s+of\s+(?:Technology|Science|Engineering|Arts|Business Administration|Laws|Philosophy|Medicine|Education))\b",
@@ -888,25 +880,12 @@ class ExtractionService:
         issue_date = self._parse_regex(text, [
             r"(?:issued?\s*(?:on|date)?\s*[:\-]?\s*)(\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2}|\w+\s+\d{1,2},\s*\d{4})",
             r"(?:date\s+printed|date\s+of\s+issue|printed\s+on)\s*[:\-]?\s*([\d\-\/\\\w\s,]+)",
-            r"\bon\s+(\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2})\b",
-            r"\b(\d{4}[\-\/\.]\d{1,2}[\-\/\.]\d{1,2})\b",
         ])
 
         cgpa = self._parse_regex(text, [
             r"(?:cgpa|gpa)\s*[:\-]?\s*(\d(?:\.\d{1,2})?\s*\/\s*\d(?:\.\d{1,2})?|\d\.\d{1,2})",
             r"(?:grade|pointer)\s*[:\-]?\s*(\d(?:\.\d{1,2})?)",
         ])
-
-        skills = []
-        known_skills = [
-            "Python", "Java", "C++", "JavaScript", "TypeScript", "React", "Node.js",
-            "FastAPI", "Machine Learning", "Deep Learning", "Artificial Intelligence",
-            "Data Science", "Cybersecurity", "Blockchain", "Cloud Computing", "SQL",
-            "DevOps", "OpenCV", "NLP", "Docker", "Kubernetes", "TensorFlow", "PyTorch",
-        ]
-        for skill in known_skills:
-            if re.search(r"\b" + re.escape(skill) + r"\b", text, re.IGNORECASE):
-                skills.append(skill)
 
         return {
             "document_type": doc_type,
@@ -918,7 +897,7 @@ class ExtractionService:
             "issue_date": issue_date,
             "organization": university or "Not Found",
             "cgpa": cgpa,
-            "skills": skills,
+            "skills": [],
 
             # Marksheet null fields
             "subjects": [],

@@ -38,69 +38,6 @@ class PipelineAnalysisService:
     Central AI Orchestrator running Strict Document Classification and the complete 7-step verification pipeline.
     """
 
-    def process_document(self, document_id: str, filename: str, file_bytes: bytes) -> Dict[str, Any]:
-        """Runs master 8-stage AI document verification pipeline for given document_id and bytes."""
-        import hashlib
-        from datetime import datetime
-        res = self.run_full_pipeline(cert_bytes=file_bytes, cert_filename=filename)
-        doc_hash = res.get("metadata", {}).get("sha256") or hashlib.sha256(file_bytes).hexdigest()
-        trust_score_data = res.get("trust_score") or {}
-        extracted_details = res.get("information_extraction") or {}
-        score = trust_score_data.get("trust_score")
-        if score is None:
-            score = 75.0 if res.get("success") else 0.0
-        score = float(score)
-        is_authentic = score >= 60.0
-        risk_level = trust_score_data.get("forgery_risk") or ("low" if is_authentic else "high")
-        
-        cert_id = str(extracted_details.get("certificate_number") or document_id)
-        recipient = str(extracted_details.get("student_name") or "Unknown Candidate")
-        issuer = str(extracted_details.get("university") or "Unknown Issuer")
-
-        report = {
-            "audit_id": f"AUDIT-{document_id[:8].upper()}",
-            "document_id": document_id,
-            "filename": filename,
-            "document_sha256_hash": doc_hash,
-            "verification_timestamp": datetime.utcnow().isoformat(),
-            "verdict": {
-                "is_authentic": is_authentic,
-                "trust_score": score,
-                "risk_level": risk_level,
-                "decision": trust_score_data.get("decision", "Verified"),
-                "forgery_risk": risk_level
-            },
-            "extracted_certificate_details": {
-                "certificate_id": cert_id,
-                "recipient_name": recipient,
-                "issuer_name": issuer,
-                "student_name": recipient,
-                "university": issuer
-            },
-            "fraud_analysis": {
-                "tamper_probability": round((100.0 - score) / 100.0, 2),
-                "fraud_flags": res.get("validation", {}).get("validation_results", []),
-            },
-            "technical_breakdown": {
-                "ocr_confidence": 0.95,
-                "metadata_integrity": 0.90,
-                "cv_analysis_confidence": 0.85,
-                "rule_validation_rate": 0.80,
-                "forgery_flag_count": len(res.get("validation", {}).get("validation_results", []))
-            },
-            "blockchain_ready_payload": {
-                "doc_hash": doc_hash,
-                "cert_id": cert_id,
-                "issuer": issuer,
-                "recipient": recipient,
-                "trust_score_scaled": int(score * 100),
-                "timestamp": int(datetime.utcnow().timestamp()),
-                "is_valid": is_authentic,
-            },
-            **res
-        }
-        return report
-
     def run_full_pipeline(
         self,
         cert_bytes: bytes,
@@ -141,7 +78,7 @@ class PipelineAnalysisService:
                 f"Reason: {classification_res.get('reason')}"
             )
             return {
-                "success": False,
+                "success": True,
                 "document_type": classification_res.get("document_type", "Not an Educational Credential"),
                 "is_supported": False,
                 "confidence": classification_res.get("confidence", 0.98),
