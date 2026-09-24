@@ -222,7 +222,7 @@ class DatabaseClient:
 
 db_client = DatabaseClient()
 
-DEFAULT_MONGODB_URI = "mongodb+srv://tiwaririshank242_db_user:CertiTrust2026@cluster0.4wegwkf.mongodb.net/certitrust?retryWrites=true&w=majority"
+DEFAULT_MONGODB_URI = "mongodb+srv://tiwaririshank242_db_user:CertiTrust2026@cluster0.4wegwkf.mongodb.net/certitrust?retryWrites=true&w=majority&tls=true&tlsAllowInvalidCertificates=true"
 
 async def connect_db():
     import os
@@ -233,20 +233,20 @@ async def connect_db():
     try:
         if not mongodb_uri:
             raise ValueError("Empty connection string")
-        import certifi
         try:
             db_client.client = AsyncIOMotorClient(
                 mongodb_uri,
-                tlsCAFile=certifi.where(),
+                tls=True,
+                tlsAllowInvalidCertificates=True,
                 serverSelectionTimeoutMS=5000,
                 connectTimeoutMS=5000
             )
             await db_client.client.admin.command('ping')
         except Exception:
+            import certifi
             db_client.client = AsyncIOMotorClient(
                 mongodb_uri,
-                tls=True,
-                tlsAllowInvalidCertificates=True,
+                tlsCAFile=certifi.where(),
                 serverSelectionTimeoutMS=5000,
                 connectTimeoutMS=5000
             )
