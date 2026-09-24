@@ -75,7 +75,12 @@ async def shutdown_event():
 @app.get("/health")
 @api_router.get("/health")
 async def health_check():
-    from database import check_db_connection
+    from database import connect_db, check_db_connection, db_client
+    if db_client.db is None or db_client.is_mock:
+        try:
+            await connect_db()
+        except Exception:
+            pass
     db_status = await check_db_connection()
     return {
         "status": "healthy",
